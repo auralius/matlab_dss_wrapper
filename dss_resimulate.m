@@ -21,19 +21,22 @@ if dss.error == 1
 end
 
 % Dynamic simulation
-N = length(dss.hires_tvect);
-x(1,:) = dss.ic; % Apply IC
+tspan = 0:dss.T_dyn:dss.tf;
 
-for k = 1 : N-1
-    x(k+1,:) = dss.state_update_fn(dss.hires_sol(k), x(k,:), dss.T_dyn);
+if strcmp(dss.odesolver, 'ode23')
+    [~,x] = ode23( @rhs, tspan, dss.ic);
+else
+    [~,x] = ode45( @rhs, tspan, dss.ic);
 end
+
+x = x';
 
 M = dss.n_inputs + dss.n_states;
 figure
 for k = 1 : dss.n_states    
     subplot(M, 1, k);
     hold on;
-    plot(dss.hires_tvect, x(:,k));
+    plot(dss.hires_tvect, x(k,:));
     xlabel('Time (s)');
     s = ['State #' num2str(k)];
     ylabel(s);
@@ -42,8 +45,17 @@ end
 for k = 1 : dss.n_inputs   
     subplot(M, 1, k+dss.n_states);
     hold on;
-    plot(dss.hires_tvect, dss.hires_sol(:,k));
+    plot(dss.hires_tvect, dss.hires_sol(k,:));
     xlabel('Time (s)')
 end
 
-dss.opt_states = x;
+dss.hires_states = x;
+dss.lores_states = x(:, (1 : int32(dss.T_ocp/dss.T_dyn) : end)); % Downsampling
+
+%--------------------------------------------------------------------------
+function dxdt = rhs(t,x)
+    u = interp1(dss.lores_tvect, dss.lores_sol, t, 'linear');
+    dxdt = dss.state_update_fn(u, x);    
+end
+%--------------------------------------------------------------------------
+end

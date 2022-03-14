@@ -25,10 +25,11 @@ dss = prepare(dss);
 
 target = @(U)(objfunc_runner(U, dss));
 
-if strcmp(dss.solver, 'sqp')
+if strcmp(dss.optsolver, 'sqp')
     opts = optimoptions(@fmincon, ...
         'Display', dss.display,...
         'Algorithm', 'sqp', ...
+        'SpecifyObjectiveGradient', true, ...
         'UseParallel', dss.parallel);
     U_opt = fmincon(target, dss.intial_guesses, [], [], [], [], ...
         dss.lb, dss.ub, [], opts);
@@ -45,26 +46,53 @@ else
     return;
 end
 
-dss.hires_sol = upsampling(dss, U_opt); %  sampled with time interval T_dyn
-dss.lores_sol = U_opt;                  %  sampled with time interval T_ocp
+dss.hires_sol = interp1(dss.lores_tvect, U_opt, dss.hires_tvect, 'linear'); %  sampled with time interval T_dyn
+dss.lores_sol = U_opt;                                                      %  sampled with time interval T_ocp
 end
 
 %%
-function res = objfunc_runner(U, dss)
-N = length(dss.hires_tvect);
-
-X_upsampled = zeros(N, dss.n_states);
-U_upsampled = upsampling(dss, U);
+function [J, grad_J] = objfunc_runner(U, dss)
 
 % Dynamic simulation
-X_upsampled(1,:) = dss.ic; % Apply IC
+tspan = 0:dss.T_ocp:dss.tf;
 
-for k = 1 : N-1
-    X_upsampled(k+1,:) = dss.state_update_fn(U_upsampled(k), X_upsampled(k,:), dss.T_dyn);
+if strcmp(dss.odesolver, 'ode23')
+    [~, X] = ode23(@(t,x)rhs(t, x, U), tspan, dss.ic);
+else
+    [~, X] = ode45(@(t,x)rhs(t, x, U), tspan, dss.ic);
 end
 
-X = X_upsampled((1 : int32(dss.T_ocp/dss.T_dyn) : end), :); % Downsampling
-res = dss.obj_fn(U, X, dss.T_ocp);
+J = dss.obj_fn(U, transpose(X), dss.T_ocp);
+
+if nargout > 1 % gradient required
+    % Using the Complex-Step Derivative Approximation method
+    h = 1e-3; % a small number to perform perturbation
+    ih = 1i*h;    
+
+    grad_J = zeros(length(U), 1);
+
+    for k = 1 : length(U)
+        U_ = U;
+        U_(k) = U(k) + ih;
+
+        % Do the perturbation
+        if strcmp(dss.odesolver, 'ode23')
+            [~, X_] = ode23(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+        else
+            [~, X_] = ode45(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+        end
+        
+        J_ = dss.obj_fn(U_, transpose(X_), dss.T_ocp);                  % Perturbed results
+        grad_J(k) = imag(J_)/h;
+    end
+end
+
+%--------------------------------------------------------------------------
+function dxdt = rhs(t, x, u)
+    un = interp1(dss.lores_tvect, u, t, 'linear');
+    dxdt = dss.state_update_fn(un, x, t);    
+end
+%--------------------------------------------------------------------------
 
 end
 
@@ -72,22 +100,11 @@ end
 function dss = prepare(dss)
 
 dss.tf          = (dss.n_horizon-1)*dss.T_ocp; % Final time
-dss.lores_tvect = (0 : dss.T_ocp : dss.tf)';   % Low-resolution time vector
-dss.hires_tvect = (0 : dss.T_dyn : dss.tf)';   % High-resolution time vector
+dss.lores_tvect = 0 : dss.T_ocp : dss.tf;   % Low-resolution time vector
+dss.hires_tvect = 0 : dss.T_dyn : dss.tf;   % High-resolution time vector
 
 end
 
-%%
-function hires = upsampling(dss, lores)
-
-if strcmp(dss.parameterization, 'zoh') == 1
-    hires = zoh_upsample_trim(lores, int32(dss.T_ocp/dss.T_dyn), ...
-                              length(dss.hires_tvect));
-elseif strcmp(dss.parameterization, 'foh') == 1
-    hires = interp1(dss.lores_tvect, lores, dss.hires_tvect, 'linear');
-end
-
-end
 %%
 function dss = sanity_check(dss)
 
@@ -104,8 +121,7 @@ fields = {'n_horizon', ...
     'intial_guesses',...
     'obj_fn',...
     'state_update_fn',...
-    'ic',...
-    'parameterization'
+    'ic'    
     };
 
 for k=1:length(fields)
@@ -125,17 +141,17 @@ if dss.T_dyn > dss.T_ocp
 end
 
 % Important dimensiouns ---------------------------------------------------
-if (~isequal(size(dss.lb),[dss.n_horizon,1])|| ...
-    ~isequal(size(dss.ub),[dss.n_horizon,1])|| ...
-    ~isequal(size(dss.intial_guesses),[dss.n_horizon,1]))
+if (~isequal(size(dss.lb),[1, dss.n_horizon])|| ...
+    ~isequal(size(dss.ub),[1, dss.n_horizon])|| ...
+    ~isequal(size(dss.intial_guesses),[1, dss.n_horizon]))
 
-    fprintf(['These fields must be: [n_horizon x 1] vectors:' ...
+    fprintf(['These fields must be: [1 x n_horizon] vectors:' ...
         ' <strong>lb, ub, intial_guesses</strong>!\n\n']);
     dss.error = 1;
     return;
 end
 
-% Mandatory fields --------------------------------------------------------
+% Non-mandatory fields --------------------------------------------------------
 if ~isfield(dss, 'parallel')
     dss.parallel = false;
 end
@@ -144,8 +160,12 @@ if ~isfield(dss, 'display')
     dss.display = 'iter';
 end
 
-if ~isfield(dss, 'solver')
+if ~isfield(dss, 'optsolver')
     dss.solver = 'sqp';
+end
+
+if ~isfield(dss, 'odesolver')
+    dss.solver = 'ode45';
 end
 
 end
