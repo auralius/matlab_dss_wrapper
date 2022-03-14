@@ -6,7 +6,7 @@ the dss_solve.m automatically computes the derivative of the objective function 
 
 When the objective function is a function of the state variables, the system's solution must be calculated first. For a complex system, such as a system modeled with PDE, SQP will almost certainly fail if the derivative function is not explicitly provided by the user.
 
-CSDA is signifficantly better. It reduces  the number of  iterations for the optimization process to complete. In some cases it even works for longer time horizon.
+CSDA is signifficantly better. It reduces  the number of  iterations for the optimization process to complete. In some cases, it even works for a longer time horizon.
 
 ----------------
 The results below is taken from ex1.m. The example is about a moving mass that moves from x = 0 to x = 0.5 within exactly 1 second. The objective is to minimize the effort. At the destination, the mass must stop moving. The solver is SQP.
@@ -21,7 +21,7 @@ In these two figures, we can see that with CSDA, SQP can handle long horizon (N=
 
 ----------------
 
-In these two figures, we can see that with CSDA, SQP converges paster (N=10).
+In these two figures, we can see that with CSDA (N=10), SQP takes less iterations to converge.
 
 #### Without CSDA - SQP converges after 27 iterations
 <img src="https://github.com/auralius/matlab_dss_wrapper/blob/main/docs/no_derivative.png" width="514" height="493">
