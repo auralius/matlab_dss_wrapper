@@ -1,4 +1,4 @@
-# matlab_dss_wrapper
+# MATLAB Direct Single Shooting Wrapper
 
 Wrapper functions for easier dynamic optimization implementations by using direct single shooting method.
 
