@@ -24,6 +24,8 @@ dss.obj_fn           = @obj_fn;
 dss.state_update_fn  = @state_update_fn;
 dss.ic               = [0 0];
 
+dss.input_type      = 'zoh'; % previous or foh?
+
 % Optional fields ---------------------------------------------------------
 dss.parallel         = true;
 dss.display          = 'iter';

@@ -54,7 +54,12 @@ dss.lores_states = x(:, (1 : int32(dss.T_ocp/dss.T_dyn) : end)); % Downsampling
 
 %--------------------------------------------------------------------------
 function dxdt = rhs(t,x)
-    u = interp1(dss.lores_tvect, dss.lores_sol, t, 'linear');
+    if strcmp(dss.input_type, 'zoh')
+        u = interp1(dss.lores_tvect, dss.lores_sol, t, 'previous');
+    elseif strcmp(dss.input_type, 'foh')
+        u = interp1(dss.lores_tvect, dss.lores_sol, t, 'linear');
+    end
+
     dxdt = dss.state_update_fn(u, x);    
 end
 %--------------------------------------------------------------------------

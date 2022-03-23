@@ -30,11 +30,12 @@ if strcmp(dss.optsolver, 'sqp')
         'Display', dss.display,...
         'Algorithm', 'sqp', ...
         'SpecifyObjectiveGradient', true, ...
+        'StepTolerance', 1e-10, ...
         'UseParallel', dss.parallel);
     U_opt = fmincon(target, dss.intial_guesses, [], [], [], [], ...
         dss.lb, dss.ub, [], opts);
 
-elseif strcmp(dss.solver, 'ps')
+elseif strcmp(dss.optsolver, 'ps')
     opts = optimoptions('patternsearch', ...
         'Display', dss.display, ...
         'UseParallel', dss.parallel);
@@ -46,8 +47,17 @@ else
     return;
 end
 
-dss.hires_sol = interp1(dss.lores_tvect, U_opt, dss.hires_tvect, 'linear'); %  sampled with time interval T_dyn
-dss.lores_sol = U_opt;                                                      %  sampled with time interval T_ocp
+%  hires_sol contains solution sampled with time interval T_dyn
+if strcmp(dss.input_type, 'zoh')
+    dss.hires_sol = interp1(dss.lores_tvect, U_opt, dss.hires_tvect, ...
+                           'previous'); 
+elseif strcmp(dss.input_type, 'foh')
+    dss.hires_sol = interp1(dss.lores_tvect, U_opt, dss.hires_tvect, ...
+                           'linear'); 
+end
+
+%  lores_sol contains solution sampled with time interval T_ocp
+dss.lores_sol = U_opt;  
 end
 
 %%
@@ -62,13 +72,17 @@ else
     [~, X] = ode45(@(t,x)rhs(t, x, U), tspan, dss.ic);
 end
 
-J = dss.obj_fn(U, transpose(X), dss.T_ocp);
+if length(tspan) ~= length(X)
+    J = 1e10; % ode solver fails, apply a very large cost
+else
+    J = dss.obj_fn(U, transpose(X), dss.T_ocp);
+end
 
 if nargout > 1 % gradient required
+      
     % Using the Complex-Step Derivative Approximation method
     h = 1e-3; % a small number to perform perturbation
     ih = 1i*h;    
-
     grad_J = zeros(length(U), 1);
 
     for k = 1 : length(U)
@@ -81,15 +95,21 @@ if nargout > 1 % gradient required
         else
             [~, X_] = ode45(@(t,x)rhs(t, x, U_), tspan, dss.ic);
         end
-        
-        J_ = dss.obj_fn(U_, transpose(X_), dss.T_ocp);                  % Perturbed results
+              
+        J_ = dss.obj_fn(U_, transpose(X_), dss.T_ocp);       
         grad_J(k) = imag(J_)/h;
-    end
-end
+    end % end for
+    
+end % end if
 
 %--------------------------------------------------------------------------
 function dxdt = rhs(t, x, u)
-    un = interp1(dss.lores_tvect, u, t, 'linear');
+    if strcmp(dss.input_type, 'zoh')
+        un = interp1(dss.lores_tvect, u, t, 'previous');
+    elseif strcmp(dss.input_type, 'foh')
+        un = interp1(dss.lores_tvect, u, t, 'linear');
+    end
+
     dxdt = dss.state_update_fn(un, x, t);    
 end
 %--------------------------------------------------------------------------
@@ -166,6 +186,10 @@ end
 
 if ~isfield(dss, 'odesolver')
     dss.solver = 'ode45';
+end
+
+if ~isfield(dss, 'input_type')
+    dss.solver = 'foh';
 end
 
 end
