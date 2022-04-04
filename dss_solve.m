@@ -30,8 +30,7 @@ if strcmp(dss.optsolver, 'sqp')
         'Display', dss.display,...
         'Algorithm', 'sqp', ...
         'SpecifyObjectiveGradient', true, ...
-        'StepTolerance', 1e-10, ...
-        'UseParallel', dss.parallel);
+        'StepTolerance', 1e-10);
     U_opt = fmincon(target, dss.intial_guesses, [], [], [], [], ...
         dss.lb, dss.ub, [], opts);
 
@@ -171,7 +170,7 @@ if (~isequal(size(dss.lb),[1, dss.n_horizon])|| ...
     return;
 end
 
-% Non-mandatory fields --------------------------------------------------------
+% Non-mandatory fields ----------------------------------------------------
 if ~isfield(dss, 'parallel')
     dss.parallel = false;
 end
@@ -189,7 +188,7 @@ if ~isfield(dss, 'odesolver')
 end
 
 if ~isfield(dss, 'input_type')
-    dss.solver = 'foh';
+    dss.input_type = 'foh';
 end
 
 end

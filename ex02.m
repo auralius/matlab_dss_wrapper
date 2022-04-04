@@ -26,31 +26,31 @@ N     = length(t);
 
 % Mandatory fields --------------------------------------------------------
 dss.n_horizon           = N;
-dss.T_ocp               = T_ocp;         % optimal control problem's period
+dss.T_ocp               = T_ocp;       % optimal control problem's period
 
-dss.n_inputs            = 1;             % valve closing rate
-dss.n_states            = 2*pipe.M;      % pressure and velocity at every pipeline node
+dss.n_inputs            = 1;           % valve closing rate
+dss.n_states            = 2*pipe.M;    % pressure and velocity at each node
 
-dss.lb                  = 0:1/(N-1):1;   % diagonal line
-dss.ub                  = ones(1,N);     % fully-close
-dss.intial_guesses      = dss.lb;        % initializa with the lower bounds
+dss.lb                  = 0:1/(N-1):1; % diagonal line
+dss.ub                  = ones(1,N);   % fully-close
+dss.intial_guesses      = dss.lb;      % initializa with the lower bounds
 
-dss.lb(1)               = 0; % fully closed at t=0
+dss.lb(1)               = 0;           % fully closed at t=0
 dss.ub(1)               = 0;
 dss.intial_guesses(1)   = 0;
 
-dss.lb(end)             = 1; % fully open at t = 10
+dss.lb(end)             = 1;           % fully open at t = 10
 dss.ub(end)             = 1;
 dss.intial_guesses(end) = 1;
 
-dss.T_dyn               = 0.001;          % dynamic simulation's period
+dss.T_dyn               = 0.001;       % dynamic simulation's period
 dss.obj_fn              = @obj_fn;
 dss.state_update_fn     = @state_update_fn;
 dss.intermediate_fn     = @intermediate_fn;
 dss.ic                  = [pipe.p0 pipe.v0];
 
 % Optional fields ---------------------------------------------------------
-dss.parallel            = 'always';
+dss.parallel            = 'always'; % Only works for pattern search
 dss.display             = 'iter';
 dss.optsolver           = 'sqp';
 dss.odesolver           = 'ode23';
