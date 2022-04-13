@@ -71,16 +71,16 @@ else
     [~, X] = ode45(@(t,x)rhs(t, x, U), tspan, dss.ic);
 end
 
-if length(tspan) ~= length(X)
-    J = 1e10; % ode solver fails, apply a very large cost
-else
+%if length(tspan) ~= length(X)
+%    J = 1e10; % ode solver fails, apply a very large cost
+%else
     J = dss.obj_fn(U, transpose(X), dss.T_ocp);
-end
+%end
 
 if nargout > 1 % gradient required
       
     % Using the Complex-Step Derivative Approximation method
-    h = 1e-3; % a small number to perform perturbation
+    h = 1e-5; % a small number to perform perturbation
     ih = 1i*h;    
     grad_J = zeros(length(U), 1);
 

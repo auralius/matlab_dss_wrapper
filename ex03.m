@@ -1,3 +1,5 @@
+% Stabilization of an F-8 Aircraft
+%
 % The dynamics model here describes the longitudinal motion of an F-8
 % aircraft, taken from the following paper:
 % Garrard, W. L., & Jordan, J. M. (1977). Design of nonlinear automatic 
