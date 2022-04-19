@@ -54,7 +54,7 @@ dss.input_type          = 'foh'; % zoh or foh?
 dss.parallel            = 'always'; % Only works for pattern search
 dss.display             = 'iter';
 dss.optsolver           = 'sqp';
-dss.odesolver           = 'ode23';  % Stiff system
+dss.odesolver           = 'ode23';  % ODE23 as proposed by the paper
 
 % Run the solver ----------------------------------------------------------
 tic
@@ -137,7 +137,7 @@ pipe.csqrd = pipe.c^2;
 pipe.f = 0.03;   % friction factor
 pipe.P = 2e5;    % Pa
 
-pipe.m = 24;            % Even integer, number of the pipeline segments
+pipe.m = 9;             % Integer, number of the pipeline segments
 pipe.M = pipe.m + 1;    % Number of the pipeline nodes
 pipe.dl = pipe.L / pipe.m;
 

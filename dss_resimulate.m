@@ -23,8 +23,12 @@ end
 % Dynamic simulation
 tspan = 0:dss.T_dyn:dss.tf;
 
-if strcmp(dss.odesolver, 'ode23')
+if strcmp(dss.odesolver, 'ode23s')
+    [~,x] = ode23s( @rhs, tspan, dss.ic);
+elseif strcmp(dss.odesolver, 'ode23')
     [~,x] = ode23( @rhs, tspan, dss.ic);
+elseif strcmp(dss.odesolver, 'ode15s')
+    [~,x] = ode15s( @rhs, tspan, dss.ic);
 else
     [~,x] = ode45( @rhs, tspan, dss.ic);
 end
@@ -47,6 +51,8 @@ for k = 1 : dss.n_inputs
     hold on;
     plot(dss.hires_tvect, dss.hires_sol(k,:));
     xlabel('Time (s)')
+    s = ['Input #' num2str(k)];
+    ylabel(s);
 end
 
 dss.hires_states = x;

@@ -66,7 +66,7 @@ function [J, grad_J] = objfunc_runner(U, dss)
 tspan = 0:dss.T_ocp:dss.tf;
 
 if strcmp(dss.odesolver, 'ode23')
-    [~, X] = ode23(@(t,x)rhs(t, x, U), tspan, dss.ic);
+    [~, X] = ode23s(@(t,x)rhs(t, x, U), tspan, dss.ic);
 else
     [~, X] = ode45(@(t,x)rhs(t, x, U), tspan, dss.ic);
 end
@@ -91,6 +91,10 @@ if nargout > 1 % gradient required
         % Do the perturbation
         if strcmp(dss.odesolver, 'ode23')
             [~, X_] = ode23(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+        elseif strcmp(dss.odesolver, 'ode23s')
+            [~, X_] = ode23s(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+        elseif strcmp(dss.odesolver, 'ode15s')
+            [~, X_] = ode15s(@(t,x)rhs(t, x, U_), tspan, dss.ic);
         else
             [~, X_] = ode45(@(t,x)rhs(t, x, U_), tspan, dss.ic);
         end
