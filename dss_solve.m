@@ -31,86 +31,111 @@ if strcmp(dss.optsolver, 'sqp')
         'Algorithm', 'sqp', ...
         'SpecifyObjectiveGradient', true, ...
         'StepTolerance', 1e-10);
-    U_opt = fmincon(target, dss.intial_guesses, [], [], [], [], ...
-        dss.lb, dss.ub, [], opts);
+    U_opt = fmincon(target, ...
+        reshape(dss.intial_guesses, [1, dss.n_horizon*dss.n_inputs]), ...
+        [], [], [], [], ...
+        reshape(dss.lb, [1, dss.n_horizon*dss.n_inputs]), ...
+        reshape(dss.ub, [1, dss.n_horizon*dss.n_inputs]), ...
+        [], opts);
 
 elseif strcmp(dss.optsolver, 'ps')
     opts = optimoptions('patternsearch', ...
         'Display', dss.display, ...
         'UseParallel', dss.parallel);
-    U_opt = patternsearch(target, dss.intial_guesses, [], [], [], [], ...
-        dss.lb, dss.ub, [], opts);
+    U_opt = patternsearch(target, ...
+        reshape(dss.intial_guesses, [1, dss.n_horizon*dss.n_inputs]), ...
+        [], [], [], [], ...
+        reshape(dss.lb, [1, dss.n_horizon*dss.n_inputs]), ...
+        reshape(dss.ub, [1, dss.n_horizon*dss.n_inputs]), ...
+        [], opts);
 
+elseif strcmp(dss.optsolver, 'ipt')
+    opts = optimoptions('interior-point', ...
+        'Display', dss.display, ...
+        "SpecifyConstraintGradient", true, ...
+        "SpecifyObjectiveGradient", true,...
+        'HessianFcn', @hessinterior);
+    U_opt = fmincon(target, ...
+        reshape(dss.intial_guesses, [1, dss.n_horizon*dss.n_inputs]), ...
+        [], [], [], [], ...
+        reshape(dss.lb, [1, dss.n_horizon*dss.n_inputs]), ...
+        reshape(dss.ub, [1, dss.n_horizon*dss.n_inputs]), ...
+        [], opts);
 else
     dss.error = 1;
     return;
 end
 
 %  hires_sol contains solution sampled with time interval T_dyn
+U_opt_ = reshape(U_opt, [dss.n_inputs, dss.n_horizon]);
+
 if strcmp(dss.input_type, 'zoh')
-    dss.hires_sol = interp1(dss.lores_tvect, U_opt, dss.hires_tvect, ...
-                           'previous'); 
+    dss.hires_sol = costum_interp1(dss.lores_tvect, U_opt_, ...
+        dss.hires_tvect, 'previous'); 
 elseif strcmp(dss.input_type, 'foh')
-    dss.hires_sol = interp1(dss.lores_tvect, U_opt, dss.hires_tvect, ...
-                           'linear'); 
+    dss.hires_sol = costum_interp1(dss.lores_tvect, U_opt_, ...
+        dss.hires_tvect, 'linear'); 
 end
 
 %  lores_sol contains solution sampled with time interval T_ocp
-dss.lores_sol = U_opt;  
+dss.lores_sol = U_opt_;  
 end
 
 %%
 function [J, grad_J] = objfunc_runner(U, dss)
-
 % Dynamic simulation
 tspan = 0:dss.T_ocp:dss.tf;
 
 if strcmp(dss.odesolver, 'ode23')
-    [~, X] = ode23s(@(t,x)rhs(t, x, U), tspan, dss.ic);
+    [~, X] = ode23s(@(t,x)rhs_(t, x, U), tspan, dss.ic);
 else
-    [~, X] = ode45(@(t,x)rhs(t, x, U), tspan, dss.ic);
+    [~, X] = ode45(@(t,x)rhs_(t, x, U), tspan, dss.ic);
 end
 
-%if length(tspan) ~= length(X)
-%    J = 1e10; % ode solver fails, apply a very large cost
-%else
-    J = dss.obj_fn(U, transpose(X), dss.T_ocp);
-%end
+if length(tspan) ~= length(X)
+    error("Failed solving the ODE!")
+end
 
-if nargout > 1 % gradient required
-      
+U_ = reshape(U, [dss.n_inputs, dss.n_horizon]);
+J = dss.obj_fn(U_, transpose(X), dss.T_ocp);
+
+if nargout > 1 % gradient required      
     % Using the Complex-Step Derivative Approximation method
     h = 1e-5; % a small number to perform perturbation
     ih = 1i*h;    
     grad_J = zeros(length(U), 1);
 
     for k = 1 : length(U)
-        U_ = U;
-        U_(k) = U(k) + ih;
+        Uc = U;
+        Uc(k) = U(k) + ih;
 
         % Do the perturbation
         if strcmp(dss.odesolver, 'ode23')
-            [~, X_] = ode23(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+            [~, X_] = ode23(@(t,x)rhs_(t, x, Uc), tspan, dss.ic);
         elseif strcmp(dss.odesolver, 'ode23s')
-            [~, X_] = ode23s(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+            [~, X_] = ode23s(@(t,x)rhs_(t, x, Uc), tspan, dss.ic);
         elseif strcmp(dss.odesolver, 'ode15s')
-            [~, X_] = ode15s(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+            [~, X_] = ode15s(@(t,x)rhs_(t, x, Uc), tspan, dss.ic);
         else
-            [~, X_] = ode45(@(t,x)rhs(t, x, U_), tspan, dss.ic);
+            [~, X_] = ode45(@(t,x)rhs_(t, x, Uc), tspan, dss.ic);
         end
-              
-        J_ = dss.obj_fn(U_, transpose(X_), dss.T_ocp);       
+           
+        Uc_ = reshape(U, [dss.n_inputs, dss.n_horizon]);
+        J_ = dss.obj_fn(Uc_, transpose(X_), dss.T_ocp);       
         grad_J(k) = imag(J_)/h;
     end % end for
     
 end % end if
 
 %--------------------------------------------------------------------------
-function dxdt = rhs(t, x, u)
+function dxdt = rhs_(t, x, u)
+    u_ = reshape(u,[dss.n_inputs, dss.n_horizon]);
     if strcmp(dss.input_type, 'zoh')
-        un = interp1(dss.lores_tvect, u, t, 'previous');
+        %un = interp1(dss.lores_tvect, u_, t, 'previous');
+        un = costum_interp1(dss.lores_tvect, u_, t, 'previous');
     elseif strcmp(dss.input_type, 'foh')
-        un = interp1(dss.lores_tvect, u, t, 'linear');
+        %un = interp1(dss.lores_tvect, u_, t, 'linear');
+        un = costum_interp1(dss.lores_tvect, u_, t, 'linear');
     end
 
     dxdt = dss.state_update_fn(un, x, t);    
@@ -164,11 +189,11 @@ if dss.T_dyn > dss.T_ocp
 end
 
 % Important dimensiouns ---------------------------------------------------
-if (~isequal(size(dss.lb),[1, dss.n_horizon])|| ...
-    ~isequal(size(dss.ub),[1, dss.n_horizon])|| ...
-    ~isequal(size(dss.intial_guesses),[1, dss.n_horizon]))
+if (~isequal(size(dss.lb),[dss.n_inputs, dss.n_horizon])|| ...
+    ~isequal(size(dss.ub),[dss.n_inputs, dss.n_horizon])|| ...
+    ~isequal(size(dss.intial_guesses),[dss.n_inputs, dss.n_horizon]))
 
-    fprintf(['These fields must be: [1 x n_horizon] vectors:' ...
+    fprintf(['These fields must be: [n_inputs x n_horizon] vectors:' ...
         ' <strong>lb, ub, intial_guesses</strong>!\n\n']);
     dss.error = 1;
     return;

@@ -17,14 +17,14 @@ dss.n_inputs         = 1;
 dss.n_states         = 2;
 dss.lb               = -4*ones(1,N);
 dss.ub               = 4*ones(1,N);
-dss.intial_guesses   = 2*ones(1,N);
+dss.intial_guesses   = 4*ones(1,N);
 dss.T_dyn            = 0.01;        % dynamic simulation's period
 
 dss.obj_fn           = @obj_fn;
 dss.state_update_fn  = @state_update_fn;
 dss.ic               = [0 0];
 
-dss.input_type      = 'zoh'; % zoh or foh?
+dss.input_type      = 'foh'; % zoh or foh?
 
 % Optional fields ---------------------------------------------------------
 dss.parallel         = true;
@@ -41,14 +41,13 @@ dss = dss_resimulate(dss);
 %%
 function J = obj_fn(U, X, dt)
 % Weighting factors for the terminal states
-r1 = 250;
-r2 = 100;
+r1 = 70;
+r2 = 70;
 
 % Final state
 xf = [0.5; 0];
 
-terminal_cost = r1*(X(1,end)-xf(1)).^2 + r2*(X(2,end)-xf(2)).^2; 
-J = dt*sum(U.^2) + terminal_cost;
+J = r1*sum(X(1,end)-xf(1)).^2 + r2*sum(X(2,end)-xf(2)).^2 + dt*sum(U.^2); 
 end
 
 %% The state update funtion 
