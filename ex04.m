@@ -4,7 +4,7 @@ clc;
 
 
 % Setup the horizon
-Tf    = 2;              % 1 second
+Tf    = 1;              % 1 second
 T_ocp = 0.1;            % Temporal discretization step
 t     = 0 : T_ocp : Tf;
 N     = length(t);
@@ -41,20 +41,20 @@ dss = dss_resimulate(dss);
 %%
 function J = obj_fn(U, X, dt)
 % Weighting factors for the terminal states
-r1 = 0;
-r2 = 0;
-r3 = 100;
-r4 = 100;
+r0 = 1;
+r1 = 10;
+r2 = 10;
+r3 = 500;
+r4 = 40;
 
 % Final state
 xf = [0; 0; 1.0; 0];
 
-terminal_cost = r1*(X(1,end)-xf(1)).^2 + ...
-                r2*(X(2,end)-xf(2)).^2 + ...
-                r3*(X(3,end)-xf(3)).^2 + ...
-                r4*(X(4,end)-xf(4)).^2; 
-J = 0*sum(U.^2) + sum(((X(3,:)-xf(3))/1e-3).^4) + ...
-    sum(((X(4,:)-xf(4))/1e-2).^4); 
+J = r0*sum(U.^2) + ...
+    r1*sum( (X(1,:)-xf(1)).^2 ) + ...
+    r2*sum( (X(2,:)-xf(2)).^2 ) + ...
+    r3*sum( (X(3,:)-xf(3)).^2 ) + ...
+    r4*sum( (X(4,:)-xf(4)).^2 );
 %J = 10*dt*(sum(U.^2) + sum(X(1,:).^2) + sum(X(2,:).^2)) + ...
 %    terminal_cost;
 

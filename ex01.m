@@ -1,3 +1,5 @@
+% A one-dimensional mass-damper system.
+
 clear;
 close all;
 clc;
