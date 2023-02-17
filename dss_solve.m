@@ -86,13 +86,19 @@ function [J, grad_J] = objfunc_runner(U, dss)
 % Dynamic simulation
 tspan = 0:dss.T_ocp:dss.tf;
 
+%opt = odeset("MaxStep", 0.001, 'RelTol',1e-8,'AbsTol',1e-9);
+
 if strcmp(dss.odesolver, 'ode23')
+[~, X] = ode23(@(t,x)rhs_(t, x, U), tspan, dss.ic);
+elseif strcmp(dss.odesolver, 'ode23s')
     [~, X] = ode23s(@(t,x)rhs_(t, x, U), tspan, dss.ic);
+elseif strcmp(dss.odesolver, 'ode15s')
+    [~, X] = ode15s(@(t,x)rhs_(t, x, U), tspan, dss.ic);
 else
     [~, X] = ode45(@(t,x)rhs_(t, x, U), tspan, dss.ic);
 end
 
-if length(tspan) ~= length(X)
+if length(tspan) ~= size(X,1)
     error("Failed solving the ODE!")
 end
 
