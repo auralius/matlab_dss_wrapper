@@ -137,7 +137,7 @@ pipe.csqrd = pipe.c^2;
 pipe.f = 0.03;   % friction factor
 pipe.P = 2e5;    % Pa
 
-pipe.m = 9;             % Integer, number of the pipeline segments
+pipe.m = 16;             % Integer, number of the pipeline segments
 pipe.M = pipe.m + 1;    % Number of the pipeline nodes
 pipe.dl = pipe.L / pipe.m;
 
