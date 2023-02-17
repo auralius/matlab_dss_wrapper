@@ -31,4 +31,11 @@ In these two figures, we can see that with CSDA (N=10), SQP takes less iteration
 #### With CSDA - SQP converges after 9 iterations
 <img src="https://github.com/auralius/matlab_dss_wrapper/blob/main/docs/with_derivative.png" width="518" height="267">
 
+----------------
+
+Swing-up control of an inverted pendulum (see ex04.m):
+
+
+![](https://github.com/auralius/matlab_dss_wrapper/blob/main/ex04.gif)
+
 
