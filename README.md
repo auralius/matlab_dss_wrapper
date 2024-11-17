@@ -11,14 +11,17 @@ When the objective function is a function of the state variables, the system's s
 CSDA signifficantly contributes to SQP's improved performances as it reduces  the number of iterations. In some cases, SQP even works for a longer time horizon when using CSDA.
 
 ----------------
+
+## Moving mass
+
 The results below is taken from ex1.m. The example is about a moving mass that moves from x = 0 to x = 0.5 within exactly 1 second. The objective is to minimize the effort. At the destination, the mass must stop moving. The solver is SQP.
 
 In these two figures, we can see that with CSDA, SQP can handle long horizon (N=101).
 
-#### Without CSDA - SQP fails 
+### Without CSDA - SQP fails 
 ![](https://github.com/auralius/matlab_dss_wrapper/blob/main/docs/long_horizon_no_derivative.png)
 
-#### With CSDA - SQP still works 
+### With CSDA - SQP still works 
 ![](https://github.com/auralius/matlab_dss_wrapper/blob/main/docs/long_horizon_with_derivative.png)
 
 ----------------
@@ -33,9 +36,18 @@ In these two figures, we can see that with CSDA (N=10), SQP takes less iteration
 
 ----------------
 
-Swing-up control of an inverted pendulum (see ex04.m):
+## Swing-up control of an inverted pendulum (see ex04.m):
 
 
 ![](https://github.com/auralius/matlab_dss_wrapper/blob/main/ex04.gif)
+
+
+----------------
+
+## F-8 aircraft control problem
+
+Please see our paper in:  
+
+https://ieeexplore.ieee.org/abstract/document/9828112/
 
 
